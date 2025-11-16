@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="shortcut icon" href="icon.png" type="image/x-icon">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>School Visit Management System</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    :root{
+        --primary-blue:#3c6b94;
+        --secondary-blue:#59808c;
+        --dark-bg:#2c3e50;
+        --darker-bg:#1a252f;
+        --light-text:#ecf0f1;
+        --border-color:#34495e;
+        --success:#2ecc71;
+        --danger:#dc0404;
+        --warning:#f39c12;
+        --card-bg:#ffffff;
+        --hover-bg:#34495e;
+        --bg-color:#ecf0f1;
+        --text-color:#2c3e50;
+    }
+    body{font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;background:var(--bg-color);color:var(--text-color);overflow-x:hidden;}
+
+    /* Sidebar */
+    .sidebar{position:fixed;left:0;top:0;width:250px;height:100vh;background:var(--dark-bg);color:var(--light-text);padding:20px 0;transition:transform 0.3s ease;z-index:1000;overflow-y:auto;display:flex;flex-direction:column;justify-content:space-between;}
+    .sidebar.closed{transform:translateX(-250px);}
+    .sidebar-header{text-align:center;padding:0 20px 20px;border-bottom:1px solid var(--border-color);}
+    .sidebar-header h2{font-size:20px;margin:10px 0 5px;color:white;}
+    .sidebar nav{margin-top:20px;flex-grow:1;}
+    .nav-item{padding:15px 20px;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;gap:12px;color:var(--light-text);text-decoration:none;border-left:4px solid transparent;}
+    .nav-item:hover{background:var(--hover-bg);}
+    .nav-item.active{background:linear-gradient(90deg, rgba(79, 172, 254, 0.2), transparent);border-left-color:var(--primary-blue);}
+    .nav-icon{font-size:18px;}
+    .close-sidebar{display:none;font-size:22px;color:white;background:none;border:none;cursor:pointer;margin-left:auto;margin-right:20px;}
+
+    /* Theme Menu */
+    .theme-menu{padding:15px 20px;border-top:1px solid var(--border-color);}
+    .theme-menu h3{font-size:14px;color:#bdc3c7;margin-bottom:10px;}
+    .theme-btn{padding:8px 12px;margin-right:8px;border:none;border-radius:5px;cursor:pointer;color:white;font-weight:600;transition:all 0.3s;}
+    .theme-btn.light{background:#3498db;}
+    .theme-btn.dark{background:#34495e;}
+    .theme-btn.green{background:#2ecc71;}
+    .theme-menu.hide-mobile{display:none;}
+
+    /* Main Wrapper */
+    .main-wrapper{margin-left:250px;transition:margin-left 0.3s ease;min-height:100vh;}
+
+    /* Top Bar */
+    .top-bar{background:var(--card-bg);padding:15px 30px;box-shadow:0 2px 4px rgba(0,0,0,0.1);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;}
+    .menu-toggle{display:none;background:var(--dark-bg);color:white;border:none;padding:10px 15px;border-radius:5px;cursor:pointer;font-size:18px;}
+    .top-bar-left{display:flex;align-items:center;gap:15px;}
+    .user-info{display:flex;align-items:center;gap:10px;padding:8px 15px;background:#f8f9fa;border-radius:8px;}
+    .user-info input{border:none;background:transparent;outline:none;font-weight:600;width:150px;}
+
+    /* online indicator */
+    .online-indicator{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:20px;border:1px solid #e6e6e6;background:transparent;font-weight:600;}
+    .online-dot{width:10px;height:10px;border-radius:50%;display:inline-block;box-shadow:0 0 6px rgba(0,0,0,0.1);}
+    .online-dot.online{background:var(--success);}
+    .online-dot.offline{background:var(--danger);}
+
+    /* Content */
+    .content{padding:30px;}
+    .page-title{font-size:28px;color:var(--dark-bg);margin-bottom:10px;}
+    .breadcrumb{color:#7f8c8d;font-size:14px;margin-bottom:30px;}
+
+    /* Stats Grid */
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;margin-bottom:30px;}
+    .stat-card{background:var(--card-bg);padding:25px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.1);display:flex;justify-content:space-between;align-items:center;border-left:4px solid;}
+    .stat-card.blue{border-left-color:var(--primary-blue);}
+    .stat-card.green{border-left-color:var(--success);}
+    .stat-card.orange{border-left-color:var(--warning);}
+    .stat-card.red{border-left-color:var(--danger);}
+    .stat-info h3{color:#7f8c8d;font-size:14px;font-weight:500;margin-bottom:30px;}
+    .stat-info .value{font-size:32px;font-weight:bold;color:var(--dark-bg);}
+    .stat-icon{font-size:40px;opacity:0.6;}
+
+    /* Content Card */
+    .content-card{background:var(--card-bg);padding:25px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.1);margin-bottom:20px;}
+    .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:15px;}
+    .card-title{font-size:20px;color:var(--dark-bg);font-weight:600;}
+    .button-group{display:flex;gap:10px;flex-wrap:wrap;}
+    .btn{padding:10px 20px;border:none;border-radius:5px;cursor:pointer;font-size:14px;font-weight:600;transition:all 0.3s;display:inline-flex;align-items:center;gap:8px;}
+    .btn-primary{background:linear-gradient(45deg,var(--primary-blue),var(--secondary-blue));color: white;}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(79,172,254,0.4);}
+    .btn-success{background:var(--success);color:white;}
+    .btn-danger{background:var(--danger);color:white;}
+    .search-box{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+    .search-box input{flex:1;min-width:250px;padding:10px 15px;border:1px solid #dce0e5;border-radius:5px;font-size:14px;}
+    .search-box input:focus{outline:none;border-color:var(--primary-blue);}
+
+    /* Styled select input for Student Class */
+    .form-group select {
+        padding: 10px 12px;
+        border: 1px solid #dce0e5;
+        border-radius: 5px;
+        font-size: 14px;
+        background-color: #fff;
+        color: var(--dark-bg);
+        transition: all 0.3s;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+    }
+    .form-group select:focus{outline: none;border-color: var(--primary-blue);}
+    .form-group {position: relative;}
+    .form-group::after {
+        content: "\f0d7";
+        font-family: "Font Awesome 6 Free";
+        font-weight: 900;
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+        color: #7f8c8d;
+    }
+
+    /* Table */
+    .table-responsive{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;min-width:800px;}
+    thead{background:linear-gradient(45deg,var(--primary-blue),var(--secondary-blue));}
+    th{padding:15px 12px;text-align:left;font-weight:600;color:white;font-size:13px;text-transform:uppercase;}
+    td{padding:12px;border-bottom:1px solid #ecf0f1;font-size:14px;}
+    tbody tr:hover{background:#f8f9fa;}
+    .action-buttons{display:flex;gap:8px;}
+    .action-btn{padding:6px 12px;border:none;border-radius:4px;cursor:pointer;font-size:12px;transition:all 0.2s;}
+    .btn-edit{background:#3498db;color:white;}
+    .btn-delete{background:var(--danger);color:white;}
+    .action-btn:hover{transform:scale(1.05);}
+
+    /* Modal */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+    .modal-overlay.show{display:flex;}
+    .modal{background:var(--card-bg);width:90%;max-width:600px;border-radius:10px;padding:30px;max-height:90vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.3);}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:2px solid #ecf0f1;}
+    .modal-title{font-size:22px;color:var(--dark-bg);font-weight:600;}
+    .close-btn{background:none;border:none;font-size:28px;cursor:pointer;color:#95a5a6;line-height:1;}
+    .close-btn:hover{color:var(--danger);}
+    .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;margin-bottom:20px;}
+    .form-group{display:flex;flex-direction:column;}
+    .form-group label{margin-bottom:8px;color:var(--dark-bg);font-weight:500;font-size:14px;}
+    .form-group input,.form-group select{padding:10px 12px;border:1px solid #dce0e5;border-radius:5px;font-size:14px;}
+    .form-group input:focus,.form-group select:focus{outline:none;border-color:var(--primary-blue);}
+    .form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:25px;}
+
+    /* Toast / Notification */
+    .toast-wrap{position:fixed;right:20px;bottom:20px;z-index:3000;}
+    .toast{min-width:260px;background:var(--card-bg);border:1px solid #e6e6e6;padding:12px 16px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.12);display:flex;gap:10px;align-items:flex-start;margin-top:12px;opacity:0;transform:translateY(12px);transition:all 300ms ease;}
+    .toast.show{opacity:1;transform:translateY(0);}
+    .toast .icon{font-size:18px;}
+    .toast .title{font-weight:700;color:var(--dark-bg);font-size:14px;}
+    .toast .msg{font-size:13px;color:#666;margin-top:4px;}
+    .toast .close-toast{margin-left:auto;background:none;border:0;cursor:pointer;font-size:14px;color:#999;}
+
+
+
+
+
+
+
+
+      .container {
+        text-align: center;
+    }
+
+    h1 {
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    .setting-btn {
+        padding: 12px 25px;
+        background: #3c6b94;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 18px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    .setting-btn:hover {
+        background: #2c4f6c;
+    }   
+
+    @media(max-width:768px){
+        .sidebar{transform:translateX(-250px);}
+        .sidebar.open{transform:translateX(0);}
+        .main-wrapper{margin-left:0;}
+        .menu-toggle{display:block;}
+        .content{padding:15px;}
+        .stats-grid{grid-template-columns:1fr;}
+        .card-header{flex-direction:column;align-items:flex-start;}
+        .button-group{width:100%;}
+        .btn{flex:1;justify-content:center;}
+        .search-box{flex-direction:column;}
+        .search-box input{width:100%;}
+        .modal{width:95%;padding:20px;}
+        .form-grid{grid-template-columns:1fr;}
+        .top-bar{padding:15px;}
+        .user-info input{width:120px;}
+        .close-sidebar{display:block;}
+        .theme-menu.hide-mobile{display:none;}
+    }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <button class="close-sidebar" id="closeSidebar"><i class="fa fa-times"></i></button>
+        <img src="icon.png" alt="" width="40px" height="40px">
+        <h2>AppVisits</h2>
+        <p>Management System</p>
+    </div>
+    <nav>
+        <a href="#" class="nav-item active" data-page="dashboard">
+            <span class="nav-icon"><i class="fa fa-chart-bar"></i></span>
+            <span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-page="visitors">
+            <span class="nav-icon"><i class="fa fa-users"></i></span>
+            <span>View Visitors</span>
+        </a>
+    </nav>
+    <!-- Theme Menu -->
+    <div class="theme-menu hide-mobile" id="themeMenu">
+        <h3>Change Theme</h3>
+        <button class="theme-btn light" data-theme="light">Light</button>
+        <button class="theme-btn dark" data-theme="dark">Dark</button>
+        <button class="theme-btn green" data-theme="green">Green</button>
+    </div>
+</div>
+
+<!-- Main Wrapper -->
+<div class="main-wrapper" id="mainWrapper">
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <button class="menu-toggle" id="menuToggle"><i class="fa fa-bars"></i></button>
+            <div class="user-info">
+                <span><i class="fa fa-user"></i></span>
+                <input type="text" id="username" placeholder="Username" />
+            </div>
+        </div>
+
+        <!-- Online indicator (small component) -->
+        <div class="online-indicator" id="onlineIndicator" title="Connection status">
+            <span class="online-dot offline" id="onlineDot"></span>
+            <span id="onlineText">Offline</span>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <!-- Dashboard Page -->
+        <div id="dashboardPage" class="page-content">
+            <h1 class="page-title">Dashboard</h1>
+            <p class="breadcrumb">Home / Dashboard</p>
+            <div class="stats-grid">
+                <div class="stat-card blue">
+                    <div class="stat-info">
+                        <h3>Total Visitors</h3>
+                        <div class="value" id="totalVisitors">0</div>
+                    </div>
+                    <div class="stat-icon"><i class="fa fa-users"></i></div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-info">
+                        <h3>Today's Visits</h3>
+                        <div class="value" id="todayVisits">0</div>
+                    </div>
+                    <div class="stat-icon"><i class="fa fa-calendar-day"></i></div>
+                </div>
+                <div class="stat-card orange">
+                    <div class="stat-info">
+                        <h3>This Week</h3>
+                        <div class="value" id="weekVisits">0</div>
+                    </div>
+                    <div class="stat-icon"><i class="fa fa-chart-line"></i></div>
+                </div>
+                <div class="stat-card red">
+                    <div class="stat-info">
+                        <h3>This Month</h3>
+                        <div class="value" id="monthVisits">0</div>
+                    </div>
+                    <div class="stat-icon"><i class="fa fa-chart-pie"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visitors Page -->
+        <div id="visitorsPage" class="page-content" style="display:none;">
+            <h1 class="page-title">All Visitors</h1>
+            <p class="breadcrumb">Home / Visitors</p>
+
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="card-title">Visitor Records</h2>
+                    <div class="button-group">
+                        <button class="btn btn-primary" id="openAddModalBtn"><i class="fa fa-plus"></i> Add New Record</button>
+                        <button class="btn btn-primary" id="downloadBtn"><i class="fa fa-download"></i> Download PDF</button>
+                    </div>
+                </div>
+
+                <div class="search-box">
+                    <input type="search" id="searchInput" placeholder="Search by name, ID, student..." />
+                    <button class="btn btn-primary" id="searchBtn"><i class="fa fa-search"></i> Search</button>
+                    <button class="btn btn-danger" id="clearSearchBtn"><i class="fa fa-times"></i> Clear</button>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                
+                                <th>Visitor Name</th>
+                                <th>Visitor ID</th>
+                                <th>Address</th>
+                                <th>Student</th>
+                                <th>Class</th>
+                                <th>Visit Numbers</th>
+                                <th>Visit Date</th>
+                                <th>Phone</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="visitorsTable">
+                            <tr>
+                                <td colspan="10" style="text-align:center;color:#95a5a6;">No visitors found</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="visitorModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modalTitle">Add Visitor</h2>
+            <button class="close-btn" id="closeVisitorModal">&times;</button>
+        </div>
+        <form id="visitorForm">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Visitor Name *</label>
+                    <input type="text" id="formVisitorName" required />
+                </div>
+                <div class="form-group">
+                    <label>Visitor ID (16 digits)</label>
+                    <input type="text" id="formVisitorID" maxlength="16" placeholder="Leave blank for NONE" />
+                </div>
+                <div class="form-group">
+                    <label>Visitor Address *</label>
+                    <input type="text" id="formVisitorAddress" required />
+                </div>
+                <div class="form-group">
+                    <label>Phone Number *</label>
+                    <input type="tel" id="formVisitorPhone" required />
+                </div>
+                <div class="form-group">
+                    <label>Student Name *</label>
+                    <input type="text" id="formStudentName" required />
+                </div>
+                <div class="form-group">
+                      <select id="formStudentClass" required>
+        <option value="" disabled selected>Select Class</option>
+        <option value="S1">S1</option>
+        <option value="S2">S2</option>
+        <option value="S3">S3</option>
+        <option value="S4ACC">S4ACC</option>
+        <option value="S5ACC">S5ACC</option>
+        <option value="S6 ACC">S6 ACC</option>
+        <option value="Level3 MMPA">Level3 MMPA</option>
+        <option value="Level3 MMPB">Level3 MMPB</option>
+        <option value="Level4 MMPA">Level4 MMPA</option>
+        <option value="Level4 MMPB">Level4 MMPB</option> 
+        <option value="Level5 MMPA">Level5 MMPA</option>
+        <option value="Level5 MMPB">Level5 MMPB</option>
+        <option value="Level3 ETE">Level3 ETE</option>
+        <option value="Level4 ETE">Level4 ETE</option>
+        <option value="Level5 ETE">Level5 ETE</option>
+        <option value="Level3 ELT">Level3 ELT</option>
+        <option value="Level4 ELT">Level4 ELT</option>
+        <option value="Level5 ELT">Level5 ELT</option>
+        <option value="Level3 CSA">Level3 CSA</option>
+        <option value="Level4 CSA">Level4 CSA</option>
+        <option value="Level5 CSA">Level5 CSA</option>
+        <option value="Level3 SOD">Level3 SOD</option>
+        <option value="Level4 SOD">Level4 SOD</option>
+        <option value="Level5 SOD">Level5 SOD</option>
+        <option value="Level3 BDC">Level3 BDC</option>
+        <option value="Level4 BDC">Level4 BDC</option>
+        <option value="Level5 BDC">Level5 BDC</option>
+        
+        
+    </select>
+                </div>
+                <div class="form-group">
+                    <label>Visit Numbers *</label>
+                    <input type="number" id="formVisitNumber" min="1" required />
+                </div>
+                <div class="form-group">
+                    <label>Visit Date *</label>
+                    <input type="date" id="formVisitDate" required />
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="saveVisitorBtn">✓ Save</button>
+                <button type="reset" class="btn btn-danger">↺ Clear Form</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ==================== Data Storage ====================
+const STORAGE_KEY = 'schoolVisitorData';
+const UPDATE_KEY = 'schoolVisitorData_update'; // used for fallback storage events
+let visitors = [];
+let editIndex = -1;
+
+// Communication channel for cross-tab notifications
+let bc = null;
+if ('BroadcastChannel' in window) {
+  bc = new BroadcastChannel('appvisits_channel');
+  bc.onmessage = (ev) => {
+    handleRemoteUpdate(ev.data);
+  };
+}
+
+// DOM Elements
+const sidebar = document.getElementById('sidebar');
+const mainWrapper = document.getElementById('mainWrapper');
+const menuToggle = document.getElementById('menuToggle');
+const closeSidebarBtn = document.getElementById('closeSidebar');
+const navItems = document.querySelectorAll('.nav-item');
+const pages = document.querySelectorAll('.page-content');
+const visitorModal = document.getElementById('visitorModal');
+const openAddModalBtn = document.getElementById('openAddModalBtn');
+const closeVisitorModal = document.getElementById('closeVisitorModal');
+const visitorForm = document.getElementById('visitorForm');
+const visitorsTable = document.getElementById('visitorsTable');
+const modalTitle = document.getElementById('modalTitle');
+const saveVisitorBtn = document.getElementById('saveVisitorBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const usernameInput = document.getElementById('username');
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
+const clearSearchBtn = document.getElementById('clearSearchBtn');
+const themeBtns = document.querySelectorAll('.theme-btn');
+
+const onlineDot = document.getElementById('onlineDot');
+const onlineText = document.getElementById('onlineText');
+
+const toastWrap = document.getElementById('toastWrap');
+
+// ==================== Sidebar Toggle ====================
+menuToggle.addEventListener('click',()=>{sidebar.classList.add('open');});
+closeSidebarBtn.addEventListener('click',()=>{sidebar.classList.remove('open');});
+
+// ==================== Page Navigation ====================
+navItems.forEach(item=>{
+    item.addEventListener('click',()=>{
+        navItems.forEach(i=>i.classList.remove('active'));
+        item.classList.add('active');
+        const page = item.dataset.page;
+        pages.forEach(p=>{
+            p.style.display = (p.id===page+'Page')?'block':'none';
+        });
+    });
+});
+
+// ==================== Modal Open/Close ====================
+openAddModalBtn.addEventListener('click',()=>{
+    visitorModal.classList.add('show');
+    modalTitle.textContent = 'Add Visitor';
+    editIndex = -1;
+    visitorForm.reset();
+});
+closeVisitorModal.addEventListener('click',()=>{visitorModal.classList.remove('show');});
+
+// ==================== Load & Save ====================
+function loadVisitors(){
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        visitors = stored?JSON.parse(stored):[];
+    } catch(err){
+        visitors = [];
+        console.error('Failed to parse stored visitors', err);
+    }
+    renderTable();
+    updateStats();
+}
+function saveVisitors(triggerNotify = true){
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(visitors));
+    // Notify other tabs/devices
+    const payload = {
+      ts: Date.now(),
+      by: usernameInput.value || 'Unknown User'
+    };
+    if (bc) {
+      bc.postMessage(payload);
+    } else {
+      // fallback: use localStorage key to trigger storage event on other tabs
+      localStorage.setItem(UPDATE_KEY, JSON.stringify(payload));
+      // remove the key quickly to reduce storage clutter
+      setTimeout(()=>localStorage.removeItem(UPDATE_KEY), 200);
+    }
+    renderTable();
+    updateStats();
+    if (triggerNotify) {
+      // Also show a local toast for the current user
+      showToast('Saved', `Record ${editIndex>=0? 'updated' : 'added'} successfully.`);
+    }
+}
+
+// ==================== Render Table ====================
+function renderTable(filteredVisitors){
+    const data = filteredVisitors || visitors;
+    if(data.length===0){
+        visitorsTable.innerHTML='<tr><td colspan="10" style="text-align:center;color:#95a5a6;">No visitors found</td></tr>';
+        return;
+    }
+    visitorsTable.innerHTML='';
+    data.forEach((v,i)=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML=`
+       
+        <td>${escapeHtml(v.visitorName)}</td>
+        <td>${escapeHtml(v.visitorID)}</td>
+        <td>${escapeHtml(v.visitorAddress)}</td>
+        <td>${escapeHtml(v.studentName)}</td>
+        <td>${escapeHtml(v.studentClass)}</td>
+        <td>${escapeHtml(v.visitNumber)}</td>
+        <td>${escapeHtml(v.visitDate)}</td>
+        <td>${escapeHtml(v.phone)}</td>
+        <td class="action-buttons">
+            <button class="action-btn btn-edit" onclick="editVisitor(${i})"><i class="fa fa-edit"></i></button>
+            <button class="action-btn btn-delete" onclick="deleteVisitor(${i})"><i class="fa fa-trash"></i></button>
+        </td>`;
+        visitorsTable.appendChild(tr);
+    });
+}
+
+// simple HTML escape to avoid injection
+function escapeHtml(str){
+    if (!str && str !== 0) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+}
+
+// ==================== Update Dashboard Stats ====================
+function updateStats(){
+    const now = new Date();
+    document.getElementById('totalVisitors').textContent = visitors.length;
+    document.getElementById('todayVisits').textContent = visitors.filter(v=>new Date(v.visitDate).toDateString()===now.toDateString()).length;
+    const weekStart = new Date(); weekStart.setDate(now.getDate()-now.getDay());
+    document.getElementById('weekVisits').textContent = visitors.filter(v=>new Date(v.visitDate)>=weekStart).length;
+    const monthStart = new Date(now.getFullYear(),now.getMonth(),1);
+    document.getElementById('monthVisits').textContent = visitors.filter(v=>new Date(v.visitDate)>=monthStart).length;
+}
+
+// ==================== Add/Edit Visitor ====================
+visitorForm.addEventListener('submit',e=>{
+    e.preventDefault();
+    const visitorIDVal = document.getElementById('formVisitorID').value.trim() || "NONE";
+    const visitor = {
+        visitorName:document.getElementById('formVisitorName').value,
+        visitorID:visitorIDVal,
+        visitorAddress:document.getElementById('formVisitorAddress').value,
+        phone:document.getElementById('formVisitorPhone').value,
+        studentName:document.getElementById('formStudentName').value,
+        studentClass:document.getElementById('formStudentClass').value,
+        visitNumber:document.getElementById('formVisitNumber').value,
+        visitDate:document.getElementById('formVisitDate').value
+    };
+    if(editIndex>=0){
+        visitors[editIndex]=visitor;
+    }else{
+        visitors.push(visitor);
+    }
+    // When saving locally from this tab, we trigger notification to others
+    saveVisitors(true);
+    visitorModal.classList.remove('show');
+});
+
+// ==================== Edit/Delete ====================
+function editVisitor(index){
+    const v = visitors[index];
+    if(!v) return;
+    modalTitle.textContent='Edit Visitor';
+    editIndex=index;
+    document.getElementById('formVisitorName').value=v.visitorName;
+    document.getElementById('formVisitorID').value=v.visitorID!=="NONE"?v.visitorID:'';
+    document.getElementById('formVisitorAddress').value=v.visitorAddress;
+    document.getElementById('formVisitorPhone').value=v.phone;
+    document.getElementById('formStudentName').value=v.studentName;
+    document.getElementById('formStudentClass').value=v.studentClass;
+    document.getElementById('formVisitNumber').value=v.visitNumber;
+    document.getElementById('formVisitDate').value=v.visitDate;
+    visitorModal.classList.add('show');
+}
+function deleteVisitor(index){
+    if(confirm('Are you sure you want to delete this visitor?')){
+        visitors.splice(index,1);
+        saveVisitors();
+    }
+}
+
+// ==================== Search ====================
+searchBtn.addEventListener('click',()=>{
+    const query = searchInput.value.toLowerCase().trim();
+    const filtered = visitors.filter(v=>{
+        return v.visitorName.toLowerCase().includes(query) ||
+               v.visitorID.toLowerCase().includes(query) ||
+               v.studentName.toLowerCase().includes(query) ||
+               v.studentClass.toLowerCase().includes(query);
+    });
+    renderTable(filtered);
+});
+clearSearchBtn.addEventListener('click',()=>{
+    searchInput.value='';
+    renderTable();
+});
+
+// ==================== Download PDF ====================
+downloadBtn.addEventListener('click',()=>{
+    if(visitors.length===0){alert('No data to download');return;}
+    const username = usernameInput.value || 'Unknown User';
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const date = new Date().toLocaleString();
+    doc.setFontSize(10);
+    doc.text(`Generated by: ${username}, Date: ${date}`, 14, 10);
+    const columns = ["Visitor Name","Visitor ID","Address","Phone","Student","Class","Visit Number","Visit Date"];
+    const rows = visitors.map(v=>[v.visitorName,v.visitorID,v.visitorAddress,v.phone,v.studentName,v.studentClass,v.visitNumber,v.visitDate]);
+    doc.autoTable({head:[columns],body:rows,startY:15});
+    doc.save('visitors.pdf');
+});
+
+// ==================== Theme Switching ====================
+themeBtns.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+        const theme = btn.dataset.theme;
+        switch(theme){
+            case 'light':
+                document.documentElement.style.setProperty('--bg-color','#ecf0f1');
+                document.documentElement.style.setProperty('--text-color','#2c3e50');
+                document.documentElement.style.setProperty('--card-bg','#ffffff');
+                break;
+            case 'dark':
+                document.documentElement.style.setProperty('--bg-color','#1a252f');
+                document.documentElement.style.setProperty('--text-color','#ecf0f1');
+                document.documentElement.style.setProperty('--card-bg','#172027');
+                break;
+            case 'green':
+                document.documentElement.style.setProperty('--bg-color','#d4efdf');
+                document.documentElement.style.setProperty('--text-color','#145a32');
+                document.documentElement.style.setProperty('--card-bg','#ffffff');
+                break;
+        }
+    });
+});
+
+// ==================== Online Status Indicator ====================
+function updateOnlineIndicator(){
+    const online = navigator.onLine;
+    if(online){
+        onlineDot.classList.remove('offline'); onlineDot.classList.add('online');
+        onlineText.textContent = 'Online';
+    } else {
+        onlineDot.classList.remove('online'); onlineDot.classList.add('offline');
+        onlineText.textContent = 'Offline';
+    }
+}
+window.addEventListener('online', updateOnlineIndicator);
+window.addEventListener('offline', updateOnlineIndicator);
+updateOnlineIndicator(); // initial
+
+// ==================== Cross-tab Remote Update Handling ====================
+// When other tab posts message, handleRemoteUpdate will fire
+function handleRemoteUpdate(payload){
+    // payload should include ts and by
+    try {
+        // reload visitors from storage and update UI
+        loadVisitors();
+        const by = payload && payload.by ? payload.by : 'Another user';
+        showToast('New data', `New record added by: ${by}`);
+    } catch (err) {
+        console.error('Error handling remote update', err);
+    }
+}
+
+// localStorage fallback: storage event fires on other tabs (not same tab)
+window.addEventListener('storage', (e) => {
+    if (!e.key) return;
+    if (e.key === UPDATE_KEY && e.newValue) {
+        try {
+            const payload = JSON.parse(e.newValue);
+            handleRemoteUpdate(payload);
+        } catch(err){
+            console.error('invalid payload', err);
+        }
+    }
+    // If underlying data key changed, reload as well
+    if (e.key === STORAGE_KEY) {
+        // another tab updated actual data
+        loadVisitors();
+    }
+});
+
+// ==================== Toast Notifications ====================
+function showToast(title, msg, timeout = 5000){
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.innerHTML = `
+      <div class="icon"><i class="fa fa-bell"></i></div>
+      <div>
+        <div class="title">${escapeHtml(title)}</div>
+        <div class="msg">${escapeHtml(msg)}</div>
+      </div>
+      <button class="close-toast" aria-label="close">&times;</button>
+    `;
+    toastWrap.appendChild(t);
+    // small delay to allow transition
+    setTimeout(()=>t.classList.add('show'),20);
+
+    const removeToast = () => {
+        t.classList.remove('show');
+        setTimeout(()=> {
+            try { toastWrap.removeChild(t); } catch(e){}
+        }, 300);
+    };
+
+    t.querySelector('.close-toast').addEventListener('click', removeToast);
+    setTimeout(removeToast, timeout);
+}
+
+// ==================== When receiving broadcast channel messages as fallback ====================
+if (!bc && 'onmessage' in window) {
+  // nothing
+}
+
+// If BroadcastChannel exists, also listen for page visibility to avoid duplicate notifications.
+if (bc) {
+  // already set bc.onmessage above
+}
+
+// ==================== Show notice when other tab adds data using BroadcastChannel
+// When saving from this tab we already posted to channel or localStorage (in saveVisitors)
+
+// ==================== Helper: When this tab starts, announce presence? (optional)
+function announcePresence(){
+  const payload = { ts: Date.now(), by: usernameInput.value || 'Unknown User', type: 'presence' };
+  if (bc) bc.postMessage(payload);
+}
+// announcePresence(); // optionally call on load
+
+// ==================== Utility: handle remote update when bc receives message (already above) ====
+if (bc) {
+  bc.onmessage = (ev) => {
+    // ignore presence messages if any
+    if (ev.data && ev.data.type === 'presence') return;
+    handleRemoteUpdate(ev.data);
+  };
+}
+
+// ==================== Initial Load ====================
+loadVisitors();
+
+// End of script
+</script>
+</body>
+</html>
